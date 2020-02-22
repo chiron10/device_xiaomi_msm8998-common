@@ -1,4 +1,5 @@
-# Copyright (C) 2019 The Android Open Source Project
+# Copyright (C) 2009 The Android Open Source Project
+# Copyright (c) 2011, The Linux Foundation. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,50 +15,27 @@
 
 import hashlib
 import common
-import os
+import re
 
-TARGET_DIR = os.getenv('OUT')
+def FullOTA_Assertions(info):
+  AddTrustZoneAssertion(info, info.input_zip)
+  return
 
-# Firmware - sagit
-def FullOTA_InstallEnd(self):
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/abl.elf"), "firmware-update/abl.elf")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/BTFM.bin"), "firmware-update/BTFM.bin")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/cmnlib64.mbn"), "firmware-update/cmnlib64.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/cmnlib.mbn"), "firmware-update/cmnlib.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/devcfg.mbn"), "firmware-update/devcfg.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/hyp.mbn"), "firmware-update/hyp.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/keymaster.mbn"), "firmware-update/keymaster.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/logfs_ufs_8mb.bin"), "firmware-update/logfs_ufs_8mb.bin")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/NON-HLOS.bin"), "firmware-update/NON-HLOS.bin")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/rpm.mbn"), "firmware-update/rpm.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/storsec.mbn"), "firmware-update/storsec.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/tz.mbn"), "firmware-update/tz.mbn")
-  self.output_zip.write(os.path.join(TARGET_DIR, "firmware-update/xbl.elf"), "firmware-update/xbl.elf")
+def IncrementalOTA_Assertions(info):
+  AddTrustZoneAssertion(info, info.target_zip)
+  return
 
-# Write Firmware updater-script
-  self.script.AppendExtra('')
-  self.script.AppendExtra('# ---- radio update tasks ----')
-  self.script.AppendExtra('')
-  self.script.AppendExtra('ui_print("Patching firmware images...");')
-  self.script.AppendExtra('package_extract_file("firmware-update/cmnlib64.mbn", "/dev/block/bootdevice/by-name/cmnlib64");')
-  self.script.AppendExtra('package_extract_file("firmware-update/cmnlib.mbn", "/dev/block/bootdevice/by-name/cmnlib");')
-  self.script.AppendExtra('package_extract_file("firmware-update/hyp.mbn", "/dev/block/bootdevice/by-name/hyp");')
-  self.script.AppendExtra('package_extract_file("firmware-update/tz.mbn", "/dev/block/bootdevice/by-name/tz");')
-  self.script.AppendExtra('package_extract_file("firmware-update/storsec.mbn", "/dev/block/bootdevice/by-name/storsec");')
-  self.script.AppendExtra('package_extract_file("firmware-update/abl.elf", "/dev/block/bootdevice/by-name/abl");')
-  self.script.AppendExtra('package_extract_file("firmware-update/devcfg.mbn", "/dev/block/bootdevice/by-name/devcfg");')
-  self.script.AppendExtra('package_extract_file("firmware-update/keymaster.mbn", "/dev/block/bootdevice/by-name/keymaster");')
-  self.script.AppendExtra('package_extract_file("firmware-update/xbl.elf", "/dev/block/bootdevice/by-name/xbl");')
-  self.script.AppendExtra('package_extract_file("firmware-update/rpm.mbn", "/dev/block/bootdevice/by-name/rpm");')
-  self.script.AppendExtra('package_extract_file("firmware-update/cmnlib64.mbn", "/dev/block/bootdevice/by-name/cmnlib64bak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/cmnlib.mbn", "/dev/block/bootdevice/by-name/cmnlibbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/hyp.mbn", "/dev/block/bootdevice/by-name/hypbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/tz.mbn", "/dev/block/bootdevice/by-name/tzbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/abl.elf", "/dev/block/bootdevice/by-name/ablbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/devcfg.mbn", "/dev/block/bootdevice/by-name/devcfgbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/keymaster.mbn", "/dev/block/bootdevice/by-name/keymasterbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/xbl.elf", "/dev/block/bootdevice/by-name/xblbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/rpm.mbn", "/dev/block/bootdevice/by-name/rpmbak");')
-  self.script.AppendExtra('package_extract_file("firmware-update/logfs_ufs_8mb.bin", "/dev/block/bootdevice/by-name/logfs");')
-  self.script.AppendExtra('package_extract_file("firmware-update/NON-HLOS.bin", "/dev/block/bootdevice/by-name/modem");')
-  self.script.AppendExtra('package_extract_file("firmware-update/BTFM.bin", "/dev/block/bootdevice/by-name/bluetooth");')
+def AddTrustZoneAssertion(info, input_zip):
+  android_info = info.input_zip.read("OTA/android-info.txt")
+  t = re.search(r'require\s+version-trustzone\s*=\s*(\S+)', android_info)
+  f = re.search(r'require\s+version-firmware\s*=\s*(.+)', android_info)
+  if t and f:
+    versions_trustzone = t.group(1).split('|')
+    version_firmware = f.group(1).rstrip()
+    if ((len(versions_trustzone) and '*' not in versions_trustzone) and \
+    (len(version_firmware) and '*' not in version_firmware)):
+      cmd = 'assert(xiaomi.verify_trustzone(' + ','.join(['"%s"' % tz for tz in versions_trustzone]) + ') == "1" || \
+abort("Error: This package requires MIUI firmware version ' + version_firmware + \
+' or newer. Please upgrade firmware and retry!"););'
+      info.script.AppendExtra(cmd)
+  return
