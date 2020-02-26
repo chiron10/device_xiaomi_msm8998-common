@@ -16,8 +16,6 @@
 # Mlipay
 /(vendor|system/vendor)/bin/mlipayd@1\.1                       u:object_r:hal_mlipay_default_exec:s0
 
-# Power HAL
-/(vendor|system/vendor)/bin/hw/android\.hardware\.power@1\.2-service-qti u:object_r:hal_power_default_exec:s0
 
 # Root extra symlink
 /bt_firmware                                                  u:object_r:bt_firmware_file:s0
@@ -41,8 +39,3 @@
 /data/decrypt\.txt                                            u:object_r:thermal_decrypt_file:s0
 /data/vendor/thermal(/.*)?                                    u:object_r:thermal_data_file:s0
 
-# Vibrator
-/sys/devices/virtual/timed_output/vibrator/(/.*)?             u:object_r:sysfs_vibrator:s0
-
-# Vibrator HAL
-/(vendor|system/vendor)/bin/hw/android\.hardware\.vibrator@1\.1-service\.msm8998 u:object_r:hal_vibrator_default_exec:s0
